@@ -57,7 +57,7 @@ async function processConversation(conversationId, messages, session) {
   const lastMessageAt = new Date(last.receivedDateTime);
 
   const fromRaw = first.from?.emailAddress?.name ?? "";
-  const senderName = fromRaw || first.from?.emailAddress?.address ?? "";
+  const senderName = fromRaw || (first.from?.emailAddress?.address ?? "");
   const senderEmail = first.from?.emailAddress?.address ?? "";
 
   const dbThread = await db.thread.upsert({
