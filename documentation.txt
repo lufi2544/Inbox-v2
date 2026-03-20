@@ -1,0 +1,549 @@
+InboxAI — Complete Reference
+AI-powered shared inbox for teams
+======================================================================
+Last updated: Phase 7 complete
+
+
+======================================================================
+WHAT IS INBOXAI?
+======================================================================
+
+InboxAI connects to your Gmail and turns it into a shared inbox your
+whole team works from together. Everyone signs in with their own
+Google account. The AI drafts replies. You review, edit, and send.
+
+One inbox. Multiple agents. No shared passwords. No forwarded emails.
+
+
+======================================================================
+SECTION 1 — SETUP
+======================================================================
+
+STEP 1 — Create a free database (Neon)
+──────────────────────────────────────────────
+1. Go to https://neon.tech and sign up (free, no credit card)
+2. Click "New Project" → name it anything
+3. Copy the connection string (looks like postgresql://user:pass@host/db...)
+4. Add to .env.local:
+   DATABASE_URL="postgresql://..."
+
+
+STEP 2 — Create the database tables
+──────────────────────────────────────────────
+Stop the dev server if running, then:
+
+   npx prisma migrate dev --name init
+
+You should see: "Your database is now in sync with your schema."
+
+
+STEP 3 — Start the app
+──────────────────────────────────────────────
+   npm run dev
+
+Open http://localhost:3000
+
+
+STEP 4 — Allow Google sign-in on localhost
+──────────────────────────────────────────────
+1. Go to https://console.cloud.google.com
+2. APIs & Services → Credentials → your OAuth client
+3. Under "Authorized redirect URIs", add:
+   http://localhost:3000/api/auth/callback/google
+4. Save
+
+If you see "redirect_uri_mismatch", this is the fix.
+
+IMPORTANT: Always stop the dev server before running Prisma migrations.
+The dev server holds a DB connection that blocks the migration lock.
+
+
+======================================================================
+SECTION 2 — USING THE APP
+======================================================================
+
+── Signing in ─────────────────────────────────────────────────────
+
+Click "Sign in with Google". Grant all permissions (Gmail read, send,
+modify). On first sign-in, your workspace is created automatically
+and you become the Admin.
+
+── Loading emails ──────────────────────────────────────────────────
+
+Click "Sync Gmail" to pull your last 50 emails. After that, the inbox
+updates automatically every 30 seconds and whenever you switch back
+to the browser tab.
+
+"Load more" / "Sync older Gmail threads" buttons appear when more
+emails are available.
+
+── Navigating ──────────────────────────────────────────────────────
+
+Keyboard shortcuts:
+  j         next email
+  k         previous email
+  Esc       close email
+
+Thread list features:
+  Hover over any thread → green ✓ button appears to resolve it instantly
+  Hover over the sender name → tooltip shows their email address
+  Hover over the timestamp → tooltip shows the exact date and time
+  Snoozed threads show when they come back (e.g. "↩ tomorrow 9:00 AM")
+  Message count shown for threads with more than one message
+
+── Replying ────────────────────────────────────────────────────────
+
+1. Click a thread to open it
+2. Write in the reply box, or click "✨ Generate AI reply"
+3. Edit the draft freely
+4. Click "Send reply →"
+
+The reply box grows automatically as you type.
+
+"Replying to:" link above the box shows who you're replying to.
+Click it to expand the original message for reference.
+
+"Discard" button clears the reply box.
+
+If you click a different thread while there's text in the box,
+you'll be asked to confirm before losing your draft.
+
+── Thread status ────────────────────────────────────────────────────
+
+  Open          New, nobody working on it
+  In Progress   Someone is composing a reply (locked)
+  Resolved      Done — reply sent
+  Snoozed       Hidden until a set time, then auto-reopens
+
+If a client replies to a resolved thread, it automatically reopens
+to Open so it doesn't get missed.
+
+── Snoozing ─────────────────────────────────────────────────────────
+
+Change status to "Snoozed" → pick a duration:
+  1 hour / Later today (6pm) / Tomorrow (9am) / Next week (9am)
+
+The thread disappears and returns on its own at the right time.
+
+── Assigning ────────────────────────────────────────────────────────
+
+"Take this" button in the thread header assigns it to you instantly.
+Or use the "Assigned" dropdown to route to any teammate.
+Filter the list by assignee using the dropdown below the tabs.
+
+── Marking read ─────────────────────────────────────────────────────
+
+Threads auto-mark as read when you open them.
+"Mark all read" appears in the header when unread threads exist.
+"Mark unread" in the thread header to put the dot back.
+
+── Searching ────────────────────────────────────────────────────────
+
+Type in the search box to search across sender, subject, and preview
+text — across all statuses at once. Result count shown below the box.
+
+── Lock indicator ───────────────────────────────────────────────────
+
+When an agent generates an AI reply, a soft lock is set. Other agents
+see "✎ [Name] is composing a reply" in the thread list and view.
+The lock expires after 10 minutes automatically.
+
+── Inviting teammates ───────────────────────────────────────────────
+
+Admins only. Go to /settings:
+1. Enter their email + choose role (Agent or Admin)
+2. Click "Create invite link"
+3. Copy and send them the link manually
+
+They sign in with Google → join your workspace → see all your emails.
+Links expire in 7 days and can only be used once.
+
+After accepting, they are signed out and must sign back in to get
+their session updated with the correct workspace.
+
+── AI settings ──────────────────────────────────────────────────────
+
+Go to /settings → "AI System Prompt". Write instructions in plain
+English. Examples:
+  "Reply in Spanish, formally."
+  "You are support for Acme. Always mention the 24/7 hotline."
+  "Keep replies under 3 sentences."
+
+Takes effect immediately on the next generation.
+
+── AI usage ─────────────────────────────────────────────────────────
+
+/settings → "AI Usage" shows how many AI replies your org generated
+this month. Resets on the 1st. Rate limits:
+  30 AI replies per user per hour
+  100 AI replies per org per hour
+
+
+======================================================================
+SECTION 3 — FULL FEATURE LIST
+======================================================================
+
+  Sign in with Google             One click, no passwords
+  Auto org + admin setup          First sign-in creates your workspace
+  Shared inbox                    Whole team, one inbox
+  Gmail sync (last 50 + paginate) Sync on demand, load more anytime
+  Auto-reopen on client reply     Resolved threads reopen if client writes back
+  AI reply generation             One click draft, you review and send
+  HTML email rendering            Emails render properly, not as raw code
+  Email sanitization              Scripts, trackers, and dangerous links stripped
+  Reply context panel             See the email you're replying to above the box
+  Auto-grow reply textarea        Box expands as you type
+  Thread status (4 states)        Open / In Progress / Resolved / Snoozed
+  Snooze with auto-return         Pick a time, thread disappears and comes back
+  Assign to teammate              Route emails to the right person
+  Take this button                One click to assign a thread to yourself
+  Quick resolve on hover          Resolve without opening the thread
+  Filter by status + assignee     Narrow down the list instantly
+  Search across all statuses      Find any email by sender, subject, or content
+  Search result count             Shows how many matches
+  Tab counts (all tabs)           See thread counts on every status tab
+  30s background sync             Teammates' changes appear quickly
+  Tab focus sync                  Inbox refreshes when you switch back
+  "All caught up" state           Clear success state when inbox is empty
+  Snoozed-until in thread list    Shows when snoozed threads come back
+  Sender email on hover           Hover sender name to see their address
+  Timestamp tooltip               Hover time to see exact date
+  Message count in list           Shows "3 msgs" for conversations
+  Keyboard shortcuts              j / k / Esc
+  Unsent reply warning            Asks before discarding a draft when switching
+  Discard reply button            One-click clear of the compose box
+  Lock indicator                  See who is composing on a thread
+  Mark all read                   One-click clear all unread dots
+  Unread count badge              Shown next to "Inbox" label + browser tab
+  Invite system                   Add teammates via a secure link
+  Settings page                   Org info, members list, invites, AI prompt
+  AI usage tracking               Monthly counter per org
+  Token auto-refresh              Never silently logged out
+  Token encryption at rest        AES-256-GCM for all OAuth tokens in DB
+  Session org re-sync             JWT re-checks org membership every 2 min
+  Rate limiting (AI + sync)       Prevents API abuse, no Redis needed
+  Audit log                       Every action recorded in DB
+  DB indexes                      Fast queries at scale
+  Thread list pagination          50 threads per page, cursor-based
+  Gmail sync batching             10 parallel requests max, no rate limit hits
+  Error boundary                  App-level crash recovery
+  404 page                        Branded not-found page
+  Env validation                  Throws at startup if required vars missing
+  Email notifications             New thread alerts, assignment emails, invite emails (Resend)
+  Billing tier structure          FREE / PRO / ENTERPRISE plans, BILLING_ENABLED flag
+  Seat limit enforcement          Blocked when billing enabled + plan limit reached
+  Monthly AI limit                Tracked via AuditLog, enforced per plan
+  Sentry error monitoring         Client + server + edge, source maps, disabled in dev
+  Gmail push notifications        Pub/Sub webhook → SSE → instant client sync (~5s)
+  Server-Sent Events              Real-time thread updates without WebSocket complexity
+  Vercel Cron jobs                Auto-unsnooze every 5min, audit log cleanup daily
+  AuditLog TTL                    90-day retention enforced by daily cron
+  Upstash Redis cache             Thread list + count cache, SSE activity signal
+  Read replica support            Automatic read/write splitting via Prisma extension
+  Microsoft Outlook support       Sign in with Microsoft, sync + reply via Graph API
+  Provider-agnostic client        Auto-routes sync/send based on signed-in provider
+
+
+======================================================================
+SECTION 4 — LIMITATIONS
+======================================================================
+
+  No real-time updates
+      Changes appear within 30 seconds, not instantly.
+
+  Near-real-time (not instant)
+      Gmail push + SSE delivers updates in ~5 seconds when configured.
+      Without Pub/Sub setup, falls back to 60-second polling.
+
+  Gmail only
+      Outlook and other providers not supported yet.
+
+  Soft lock only
+      Two agents can technically still both send if they ignore the warning.
+
+  Billing off by default
+      All features unlimited until BILLING_ENABLED=true. Stripe not wired yet.
+
+  Rate limits
+      30 AI replies/hour per user, 100/hour per org.
+      Sync limited to once per 30 seconds.
+
+  No mobile layout
+      Desktop only for now.
+
+  Sentry optional
+      Error monitoring only active when NEXT_PUBLIC_SENTRY_DSN is set.
+
+  Resend optional
+      Email notifications only sent when RESEND_API_KEY is set.
+      App works normally without it.
+
+
+======================================================================
+SECTION 5 — DEPLOY TO VERCEL
+======================================================================
+
+STEP 1 — Push to GitHub
+──────────────────────────────────────────────
+   git add .
+   git commit -m "InboxAI build"
+   git push origin main
+
+
+STEP 2 — Import to Vercel
+──────────────────────────────────────────────
+vercel.com → Add New Project → import repo → do NOT deploy yet
+
+
+STEP 3 — Environment variables
+──────────────────────────────────────────────
+Add in Vercel project settings → Environment Variables:
+
+  DATABASE_URL          Neon connection string
+                        Append: &pgbouncer=true&connection_limit=1
+                        Full example:
+                        postgresql://user:pass@host/db?sslmode=require&pgbouncer=true&connection_limit=1
+
+  GOOGLE_CLIENT_ID      From Google Cloud Console
+  GOOGLE_CLIENT_SECRET  From Google Cloud Console
+  NEXTAUTH_SECRET       openssl rand -base64 32
+  NEXTAUTH_URL          https://your-app.vercel.app  (no trailing slash)
+  OPENAI_API_KEY        From platform.openai.com/api-keys
+  TOKEN_ENCRYPTION_KEY  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  CRON_SECRET           openssl rand -base64 32  (Vercel sets this automatically on Pro)
+
+Optional — Resend (email notifications):
+  RESEND_API_KEY        From resend.com (free: 3,000 emails/month)
+  EMAIL_FROM            e.g. InboxAI <notifications@yourdomain.com>
+                        Leave blank to use resend.dev test address
+
+Optional — Sentry (error monitoring):
+  NEXT_PUBLIC_SENTRY_DSN  From sentry.io project settings → DSN
+  SENTRY_DSN              Same value as above (used server-side)
+  SENTRY_ORG              Your Sentry org slug
+  SENTRY_PROJECT          Your Sentry project slug
+  SENTRY_AUTH_TOKEN       From sentry.io → Settings → Auth Tokens
+                          Needed to upload source maps during build
+
+Optional — Gmail push notifications (real-time sync):
+  PUBSUB_TOPIC          Full Pub/Sub topic name:
+                        projects/YOUR_GCP_PROJECT/topics/gmail-push
+                        See Section 9 for setup instructions.
+  WEBHOOK_SECRET        A random string you choose; add as ?token= in your
+                        Pub/Sub push subscription URL
+
+Optional — Billing (disabled by default):
+  BILLING_ENABLED       Set to "true" to enforce plan limits
+                        Leave unset for unlimited everything (dev mode)
+
+Optional — Microsoft Outlook:
+  AZURE_AD_CLIENT_ID      From portal.azure.com → App registrations
+  AZURE_AD_CLIENT_SECRET  Client secret from the same app
+  AZURE_AD_TENANT_ID      Your tenant ID, or "common" for multi-tenant
+                          Redirect URI to add: /api/auth/callback/azure-ad
+                          Scopes: Mail.Read Mail.Send Mail.ReadWrite offline_access
+
+Optional — Upstash Redis (caching + SSE optimization):
+  UPSTASH_REDIS_REST_URL    From console.upstash.com (free: 10k cmds/day)
+  UPSTASH_REDIS_REST_TOKEN  From same dashboard
+                            Enables: 8s thread list cache, 15s count cache,
+                            Redis-based SSE activity signal (no DB polling)
+
+Optional — Read replica (scale reads):
+  DATABASE_URL_REPLICA  Neon read replica connection string
+                        All SELECT queries route to replica automatically
+                        Writes still go to primary
+
+
+STEP 4 — Add Vercel redirect URI to Google
+──────────────────────────────────────────────
+console.cloud.google.com → Credentials → your OAuth client →
+Authorized redirect URIs → add:
+  https://your-app.vercel.app/api/auth/callback/google
+
+
+STEP 5 — Deploy
+──────────────────────────────────────────────
+Click Deploy. On first visit, click "Sync Gmail".
+
+
+======================================================================
+SECTION 6 — SCALABILITY NOTES
+======================================================================
+
+Current architecture handles small-to-medium teams well. Here is
+what is already in place and what needs work before scaling to
+hundreds of orgs:
+
+ALREADY SOLID
+  Multi-tenant isolation      Every query filtered by orgId — no data leakage
+  DB indexes                  (orgId, status, lastMessageAt) + (orgId, assignedToId)
+                              + AuditLog indexes for rate-limit queries
+  Thread pagination           50 threads per page, cursor-based
+  Gmail sync batching         10 concurrent requests max per sync
+  Connection pooling          pgBouncer recommended for Vercel (see env vars)
+  Rate limiting               AuditLog-based, works across serverless instances
+  Token encryption            AES-256-GCM, keys in env vars
+  Prisma singleton            One connection reused per serverless instance
+
+ALREADY SOLID (Phase 6 additions)
+  Gmail Push + SSE            New emails appear in ~5s when Pub/Sub configured
+                              SSE connection per client, 55s lifetime + auto-reconnect
+                              Fallback: 60s poll if SSE disconnected
+  Background cron jobs        Unsnooze every 5min, AuditLog cleanup daily
+                              Removed unsnooze from the hot request path
+  vercel.json                 Cron schedule committed, CRON_SECRET auth
+
+ALREADY SOLID (Phase 7 additions)
+  Redis cache                 Thread lists (8s TTL) + tab counts (15s TTL)
+                              Version-keyed so mutations invalidate instantly
+  SSE via Redis               Activity signal in Redis — no DB polling per client
+                              Scales to many concurrent clients without DB load
+  Read replicas               @prisma/extension-read-replicas, zero code change
+                              Just add DATABASE_URL_REPLICA and it works
+  Multi-provider auth         Google + Microsoft in same codebase
+                              Shared DB models — adding more providers is easy
+
+NEEDS WORK BEFORE LARGE SCALE
+  SSE fan-out at extreme load At 1000+ concurrent clients, Redis pub/sub
+                              instead of per-client polling is needed.
+                              Current approach handles ~100 clients well.
+
+  Per-org rate limiting       Currently global limits per user/org
+                              Should throttle at API gateway level per org
+
+  Structured logging          Sentry in place, but no custom event tracking yet
+                              Add breadcrumbs, user context, and business metrics
+
+
+======================================================================
+SECTION 7 — ROADMAP
+======================================================================
+
+PHASE 4 — Polish (CURRENT / COMPLETE)
+  [x] HTML email rendering + XSS sanitization
+  [x] Gmail sync batching (10 at a time)
+  [x] Thread list cursor pagination (50/page)
+  [x] AuditLog + Thread DB indexes
+  [x] Mark all read
+  [x] Sender email on hover
+  [x] Auto-reopen resolved threads on new client reply
+  [x] "All caught up" empty state
+  [x] Auto-grow reply textarea
+  [x] "Take this" quick-assign button
+  [x] Reply context panel (collapsed quote)
+  [x] Quick resolve on hover
+  [x] Snoozed-until shown in thread list
+  [x] Search result count
+  [x] Tab counts on all tabs
+  [x] Session org re-sync after invite accept
+
+PHASE 5 — Notifications + Billing (COMPLETE)
+  [x] Email notifications via Resend
+        New thread alerts to all org members (rate-limited 1/5min)
+        Assignment notification when thread routed to you
+        Invite email sent automatically when admin creates a link
+  [x] Billing tier structure
+        FREE / PRO / ENTERPRISE plan definitions in lib/plans.js
+        BILLING_ENABLED flag — everything free until you flip it
+        Seat limit + monthly AI limit enforced when billing enabled
+        Wire Stripe by: update org.plan via webhook, set BILLING_ENABLED=true
+  [x] Sentry error monitoring
+        Client + server + edge configs in place
+        Disabled in dev, enabled in production automatically
+        Source maps uploaded on build for readable stack traces
+
+PHASE 6 — Real-time + Reliability (COMPLETE)
+  [x] Gmail Push Notifications (webhooks)
+        Gmail → Pub/Sub → /api/gmail/webhook bumps org.lastActivityAt
+        Auto-renews watch() on every sync (7-day expiry handled automatically)
+  [x] Server-Sent Events (SSE)
+        /api/sse polls lastActivityAt every 5s, pushes "sync" event to clients
+        55s connection lifetime + auto-reconnect; 60s fallback poll as safety net
+  [x] Background cron jobs (Vercel Cron)
+        /api/cron/unsnooze — every 5 min, reopens expired snoozed threads
+        /api/cron/cleanup  — daily 3 AM UTC, deletes audit logs > 90 days
+        vercel.json configured; CRON_SECRET auth on both endpoints
+  [x] Sentry error monitoring — moved to Phase 5, complete
+
+PHASE 7 — Scale + Multi-provider (COMPLETE)
+  [x] Upstash Redis cache
+        Thread list: 8s TTL, version-keyed for instant invalidation
+        Tab counts: 15s TTL, invalidated on every mutation
+        SSE activity signal via Redis (no per-client DB polling)
+  [x] Read replicas
+        @prisma/extension-read-replicas — set DATABASE_URL_REPLICA to enable
+        Reads auto-route to replica; writes stay on primary
+  [x] Microsoft Outlook support
+        Azure AD OAuth via NextAuth — sign in with Microsoft account
+        /api/outlook sync via Microsoft Graph (conversations → threads)
+        /api/outlook/send — reply threading via Graph replyTo API
+        Provider-aware client: auto-routes sync/send to correct endpoint
+        Shared thread/message DB models — provider-agnostic from day 1
+
+PHASE 8 — Enterprise
+  [ ] SSO / SAML (Okta, Azure AD)
+  [ ] Custom domain sending (send as support@yourcompany.com)
+  [ ] Advanced analytics (reply time, agent performance, SLA)
+  [ ] Audit log export (CSV / API)
+  [ ] IP allowlist + session management
+  [ ] API gateway rate limiting (per-org at edge)
+  [ ] Uptime / status page
+
+
+======================================================================
+SECTION 9 — GMAIL PUSH NOTIFICATIONS (OPTIONAL)
+======================================================================
+
+Without this, InboxAI polls for new emails every 60 seconds (perfectly
+fine for most teams). With this, new emails appear in ~5 seconds.
+
+STEP 1 — Enable Gmail API + create a Pub/Sub topic
+──────────────────────────────────────────────────────
+1. console.cloud.google.com → your project
+2. Enable "Gmail API" and "Cloud Pub/Sub API"
+3. Pub/Sub → Topics → Create topic → name it "gmail-push"
+4. Copy the full topic name:
+   projects/YOUR_PROJECT_ID/topics/gmail-push
+
+STEP 2 — Grant Gmail permission to publish
+──────────────────────────────────────────────────────
+Run in Cloud Shell or local gcloud CLI:
+
+   gcloud pubsub topics add-iam-policy-binding gmail-push \
+     --member=serviceAccount:gmail-api-push@system.gserviceaccount.com \
+     --role=roles/pubsub.publisher
+
+STEP 3 — Create a push subscription
+──────────────────────────────────────────────────────
+Pub/Sub → Subscriptions → Create → Push → set endpoint URL to:
+
+   https://your-app.vercel.app/api/gmail/webhook?token=YOUR_SECRET
+
+Choose any random string for YOUR_SECRET.
+
+STEP 4 — Add env vars to Vercel
+──────────────────────────────────────────────────────
+   PUBSUB_TOPIC    projects/YOUR_PROJECT_ID/topics/gmail-push
+   WEBHOOK_SECRET  the same random string from Step 3
+
+STEP 5 — Deploy and sync
+──────────────────────────────────────────────────────
+Deploy the app. Click "Sync Gmail" once — this calls gmail.users.watch()
+to register the push subscription for your inbox.
+
+Watches expire after 7 days. InboxAI renews them automatically on every
+sync, so as long as someone syncs at least weekly, it stays active.
+
+
+======================================================================
+SECTION 10 — QUICK COMMANDS
+======================================================================
+======================================================================
+
+  npm run dev                              Start local dev server (restart after migrations)
+  npx prisma migrate dev --name <name>     Apply schema changes (stop server first)
+  npx prisma studio                        Visual DB browser (localhost:5555)
+  npx prisma generate                      Regenerate Prisma client
+  npm run build                            Test production build
+  npm run lint                             Lint check

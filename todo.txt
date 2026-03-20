@@ -1,0 +1,221 @@
+InboxAI — Missing Features (Cost-Controlled AI Strategy)
+Last updated: 2026-03-20 (session 2 complete)
+======================================================================
+
+PRINCIPLE
+──────────────────────────────────────────────────────────────────────
+- AI must NEVER run automatically
+- AI only runs on explicit user action (button click)
+- No background AI, no auto-suggestions, no hidden costs
+
+======================================================================
+PRIORITY EXECUTION ORDER
+======================================================================
+
+TIER 1 — Implement first (highest impact, lowest effort)
+  [x] 1.  Auto-trigger Gmail sync on first login
+  [x] 2.  Empty state with clear CTA
+  [x] 3.  "Needs reply" indicator (last message from external sender)
+  [x] 4.  Sync status indicator (last synced timestamp)
+  [x] 5.  Multiple AI generation modes (short/detailed/formal/friendly)
+  [x] 6.  AI usage counter visible in compose panel
+  [x] 7.  Optimistic UI updates (immediate state changes before API)
+  [x] 8.  Skeleton loading states (thread list + thread view)
+  [x] 9.  Bulk actions (multi-select, bulk resolve/assign/mark read)
+  [x] 10. Saved replies / templates (schema + API + UI) ← VERY IMPORTANT
+  [x] 11. Internal notes on threads (schema + API + UI)
+
+TIER 2 — Next round (start here next session)
+  [ ] 12. Per-user signatures (stored per user, auto-inserted in compose)
+  [ ] 13. Tags + tag filters (schema + API + UI, color-coded)
+  [ ] 14. Thread activity timeline (per-thread audit log view)
+  [ ] 15. Auto-assign rules (by sender/domain/keyword — rule engine)
+  [ ] 16. Advanced search filters (date range, tags, combine filters)
+  [ ] 17. Analytics dashboard (response time, resolved per agent)
+  [ ] 18. In-app notifications (assignment alerts in sidebar, not just email)
+  [ ] 19. @mentions in notes (notify mentioned teammate)
+  [ ] 20. Seen/read indicators per user on thread
+
+TIER 3 — Later
+  [ ] 21. Auto-tagging (keyword rules, no AI)
+  [ ] 22. Auto-snooze rules
+  [ ] 23. VIP senders / priority rules
+  [ ] 24. Retry failed Gmail sync
+  [ ] 25. More granular roles
+  [ ] 26. Session management (active sessions, logout all)
+  [ ] 27. Slack notifications
+  [ ] 28. Webhooks (basic event API)
+  [ ] 29. Public REST API
+  [ ] 30. Rich text editor improvements
+  [ ] 31. Attachment support (upload + preview)
+  [ ] 32. Save filter views
+
+FUTURE (AI expansion — controlled)
+  [ ] AI usage limits per org (billing)
+  [ ] Pay-per-use model
+  [ ] Optional auto-AI behind toggle
+  [ ] AI batching (reduce cost per call)
+
+======================================================================
+DETAIL — ALL ITEMS
+======================================================================
+
+## 1. Onboarding & First Experience
+  [ ] Auto-trigger Gmail sync on first login
+  [ ] Guided onboarding UI (step-by-step)
+  [ ] Empty state with clear CTA
+  [ ] Auto-open first thread after sync
+  [ ] Highlight "Generate AI reply" button clearly
+  [ ] Reduce time-to-first-value to < 60 seconds
+
+## 2. AI Features (Strictly On-Demand)
+  [ ] "Generate AI reply" button (existing, improve UX)
+  [ ] Multiple generation modes:
+        - Short reply
+        - Detailed reply
+        - Formal tone
+        - Friendly tone
+  [ ] Regenerate option (with warning about usage)
+  [ ] Show estimated AI usage before generating
+  [ ] Show usage counter per user/org
+  [ ] Allow editing system prompt per org
+  [ ] Save last generated reply (avoid accidental loss)
+
+## 3. Inbox Intelligence (NO AI)
+  [ ] "Needs reply" indicator (based on last sender logic)
+  [ ] Highlight unanswered threads
+  [ ] Response time tracking per thread
+  [ ] Priority rules (manual, not AI):
+        - VIP senders
+        - Specific domains
+  [ ] Sort by: newest / oldest / longest waiting
+  [ ] Detect follow-ups based on timestamps
+
+## 4. Automation System (Rule-Based, No AI)
+  [ ] Auto-assign rules:
+        - by sender email
+        - by domain
+        - by subject keywords
+  [ ] Auto-snooze rules:
+        - after reply
+        - based on time
+  [ ] Auto-tagging (keyword-based, not AI)
+  [ ] Simple rule engine: IF condition THEN action
+
+## 5. Collaboration Enhancements
+  [ ] Internal notes on threads
+  [ ] @mentions
+  [ ] Thread activity timeline (audit per thread)
+  [ ] Seen/read indicators per user
+  [ ] Stronger lock system (prevent double send)
+  [ ] Manual "claim thread" flow improvement
+
+## 6. Email Composition Improvements
+  [ ] Saved replies / templates (VERY IMPORTANT)
+  [ ] Per-user signatures
+  [ ] Quick insert templates (shortcuts)
+  [ ] Rich text editor improvements
+  [ ] Attachments support (upload + preview)
+
+## 7. Tags & Organization
+  [ ] Manual tags
+  [ ] Tag filters
+  [ ] Tag-based rules (no AI)
+  [ ] Color-coded tags
+
+## 8. Search & Filtering
+  [ ] Advanced filters: status / assignee / date range / tags
+  [ ] Combine filters
+  [ ] Save filter views
+  [ ] Improve full-text search performance
+
+## 9. Analytics (No AI Needed)
+  [ ] Average response time
+  [ ] Threads resolved per user
+  [ ] Open vs resolved threads
+  [ ] Unanswered threads count
+  [ ] Activity per agent
+  [ ] Simple dashboard
+
+## 10. Notifications & Awareness
+  [ ] In-app notifications
+  [ ] Assignment notifications
+  [ ] Mention notifications
+  [ ] New thread alerts in UI
+  [ ] Notification preferences per user
+
+## 11. Performance & UX
+  [ ] Faster thread switching
+  [ ] Optimistic UI updates
+  [ ] Better loading states (skeletons)
+  [ ] Bulk actions (multi-select threads)
+  [ ] Keyboard-first improvements
+
+## 12. Reliability & Edge Cases
+  [ ] Retry failed Gmail sync
+  [ ] Handle duplicate threads
+  [ ] Clear error states
+  [ ] Sync status indicator
+  [ ] Graceful fallback when Gmail fails
+
+## 13. Security & Permissions
+  [ ] More granular roles (beyond admin/agent)
+  [ ] Restrict actions per role
+  [ ] Session management (active sessions)
+  [ ] Logout from all devices
+
+## 14. Integrations (Low Cost First)
+  [ ] Webhooks (basic events)
+  [ ] Slack notifications (no AI)
+  [ ] Public API (basic read/write)
+
+## 15. FUTURE (AI Expansion — Controlled)
+  [ ] AI usage limits per org
+  [ ] Pay-per-use model later
+  [ ] Optional auto-AI features behind toggle
+  [ ] AI batching (reduce cost per call)
+
+======================================================================
+COMPLETED THIS SESSION (2026-03-20)
+======================================================================
+
+Phase 5 — Notifications + Billing
+  [x] Email notifications via Resend (new threads, assignment, invite)
+  [x] Billing tier structure (FREE/PRO/ENTERPRISE, BILLING_ENABLED flag)
+  [x] Sentry error monitoring (client/server/edge, disabled in dev)
+
+Phase 6 — Real-time + Reliability
+  [x] Gmail push webhooks (/api/gmail/webhook, Pub/Sub)
+  [x] SSE endpoint (/api/sse, polls Redis or DB, 55s + auto-reconnect)
+  [x] Vercel Cron jobs (unsnooze every 5min, cleanup daily)
+  [x] vercel.json with cron config
+
+Phase 7 — Scale + Multi-provider
+  [x] Upstash Redis cache (thread list 8s TTL, counts 15s TTL, SSE signal)
+  [x] Read replicas (@prisma/extension-read-replicas, set DATABASE_URL_REPLICA)
+  [x] Microsoft Outlook OAuth + sync + send (via Microsoft Graph)
+  [x] Provider-aware client routing (Gmail vs Outlook auto-detected)
+
+Tier 1 UX
+  [x] Auto-trigger Gmail sync on first login (localStorage flag)
+  [x] Empty state with "Sync inbox now" CTA button
+  [x] "Needs reply" indicator (orange badge, set during sync)
+  [x] Sync status indicator (last synced timestamp)
+  [x] Multiple AI modes (short/detailed/formal/friendly dropdown)
+  [x] AI usage counter in compose panel
+  [x] Skeleton loading states (thread list + message view)
+  [x] Bulk actions (select mode, resolve/mark read)
+  [x] Saved replies / templates (create, insert, delete)
+  [x] Internal notes on threads (amber panel, prefetched on open)
+
+Bug fixes
+  [x] SSE TypeScript syntax in .js file (removed ReturnType annotations)
+  [x] statusParam used before declaration in threads route
+  [x] SSE bundled for browser (added export const runtime = "nodejs")
+
+======================================================================
+PREVIOUS NOTES
+======================================================================
+
+- [FIXED] Cuando respondemos a un correo en un mismo thread, aparece de vuelta
+  en la bandeja de entrada de recibidos.

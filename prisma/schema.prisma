@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ORGANIZATION
+// One per company. Everything is scoped to this.
+// ─────────────────────────────────────────────
+
+model Organization {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique // used in URLs: app.com/org/acme
+  plan           Plan      @default(FREE)
+  lastActivityAt DateTime? // bumped by Gmail push webhooks — SSE uses this to notify clients
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  users            User[]
+  connectedAccounts ConnectedAccount[]
+  threads          Thread[]
+  aiSettings       AISettings?
+  auditLogs        AuditLog[]
+  invites          Invite[]
+  savedReplies     SavedReply[]
+}
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+// ─────────────────────────────────────────────
+// USER
+// Belongs to one org. Can be admin or agent.
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(AGENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id])
+
+  connectedAccounts ConnectedAccount[]
+  assignedThreads   Thread[]           @relation("AssignedTo")
+  lockedThreads     Thread[]           @relation("LockedBy")
+  replies           AIReply[]
+  auditLogs         AuditLog[]
+  savedReplies      SavedReply[]       @relation("SavedReplyAuthor")
+  notes             Note[]             @relation("NoteAuthor")
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+// ─────────────────────────────────────────────
+// CONNECTED ACCOUNT
+// OAuth tokens per user per provider.
+// Refresh token stored here so we can renew silently.
+// ─────────────────────────────────────────────
+
+model ConnectedAccount {
+  id           String   @id @default(cuid())
+  provider     Provider
+  email        String   // the connected inbox address
+  accessToken  String   // encrypt at rest in production
+  refreshToken String   // encrypt at rest in production
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+enum Provider {
+  GOOGLE
+  MICROSOFT
+}
+
+// ─────────────────────────────────────────────
+// THREAD
+// One email conversation. Scoped to an org.
+// ─────────────────────────────────────────────
+
+model Thread {
+  id        String       @id @default(cuid())
+  gmailId    String       // Gmail thread ID
+  subject    String
+  status     ThreadStatus @default(OPEN)
+  isRead        Boolean      @default(false)
+  snippet       String       @default("") // Preview of the last message
+  senderName    String       @default("") // Display name of the original sender
+  senderEmail   String       @default("") // Email address of the original sender
+  snoozedUntil  DateTime?               // Auto-unsnooze at this time; null if not snoozed
+  lastMessageAt DateTime?               // sentAt of the most recent message — used for inbox sort order
+  needsReply    Boolean   @default(false)  // true when last msg is from external sender
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  // Soft lock — set when an agent starts composing a reply.
+  // Expires after 10 minutes (checked in application layer).
+  lockedByUserId String?
+  lockedAt       DateTime?
+  lockedBy       User?     @relation("LockedBy", fields: [lockedByUserId], references: [id])
+
+  messages Message[]
+  replies  AIReply[]
+  notes    Note[]
+
+  @@unique([gmailId, orgId]) // same thread can't be imported twice per org
+  @@index([orgId, status, lastMessageAt(sort: Desc)]) // primary inbox query
+  @@index([orgId, assignedToId])                      // assignee filter
+}
+
+enum ThreadStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  SNOOZED
+}
+
+// ─────────────────────────────────────────────
+// MESSAGE
+// Individual email within a thread.
+// ─────────────────────────────────────────────
+
+model Message {
+  id        String   @id @default(cuid())
+  gmailId   String   @unique
+  from      String
+  body      String
+  sentAt    DateTime
+  createdAt DateTime @default(now())
+
+  threadId String
+  thread   Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// AI REPLY
+// Draft generated by AI. Agent edits, then sends.
+// Never auto-sent — human always in the loop.
+// ─────────────────────────────────────────────
+
+model AIReply {
+  id        String      @id @default(cuid())
+  draft     String      // original AI-generated text
+  final     String?     // edited version actually sent (null if discarded)
+  status    ReplyStatus @default(DRAFT)
+  sentAt    DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  threadId String
+  thread   Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+}
+
+enum ReplyStatus {
+  DRAFT
+  SENT
+  DISCARDED
+}
+
+// ─────────────────────────────────────────────
+// AI SETTINGS
+// Per-org AI config. Admins set the tone/rules.
+// ─────────────────────────────────────────────
+
+model AISettings {
+  id           String @id @default(cuid())
+  systemPrompt String @default("Reply to emails in a professional, concise, and friendly tone.")
+
+  orgId String       @unique
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// INVITE
+// Admin generates a token link. Recipient opens it, signs in, joins the org.
+// ─────────────────────────────────────────────
+
+model Invite {
+  id        String    @id @default(cuid())
+  email     String    // who it was sent to (informational, not enforced on accept)
+  token     String    @unique @default(cuid())
+  role      Role      @default(AGENT)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG
+// Immutable record of every meaningful action.
+// Required for compliance and debugging.
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // e.g. "thread.assigned", "reply.sent", "reply.generated"
+  metadata  Json?    // flexible extra data per action
+  createdAt DateTime @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([userId, action, createdAt]) // rate-limit queries by user
+  @@index([orgId, action, createdAt])  // rate-limit queries by org
+}
+
+// ─────────────────────────────────────────────
+// SAVED REPLY
+// Reusable reply templates scoped to an org.
+// ─────────────────────────────────────────────
+
+model SavedReply {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  shortcut  String?  // e.g. "ty" inserts a "thank you" template
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("SavedReplyAuthor", fields: [createdById], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// NOTE
+// Internal team notes on a thread.
+// ─────────────────────────────────────────────
+
+model Note {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+
+  threadId String
+  thread   Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation("NoteAuthor", fields: [authorId], references: [id])
+}

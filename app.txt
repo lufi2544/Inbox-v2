@@ -1,0 +1,149 @@
+InboxAI — SaaS product for companies
+AI-powered shared inbox (Gmail). Sell to multiple companies.
+======================================================================
+
+
+PHASE 1 — FOUNDATION
+─────────────────────────────────────────────
+  [OK] Design multi-tenant Prisma schema
+         Models: Organization, User, ConnectedAccount, Thread,
+                 Message, AIReply, AISettings, AuditLog
+         Enums:  Plan, Role, Provider, ThreadStatus, ReplyStatus
+
+  [OK] Migrate datasource from SQLite to PostgreSQL
+
+  [OK] lib/db.js — Prisma singleton (prevents connection exhaustion in serverless)
+
+  [OK] Fix bug in /api/gmail/route.js
+         selected.messages → messages (was crashing on every thread list load)
+
+  [OK] Auth — NextAuth + Google OAuth (next-auth/route.js)
+         - Store refresh token + expiry in ConnectedAccount
+         - Auto-refresh access token when expired (60s buffer)
+         - signIn callback: auto-create Org + User on first sign-in
+         - Session exposes: userId, orgId, role, error
+
+  [OK] /api/gmail/route.js — multi-tenant + DB persistence
+         - Scoped to session.orgId
+         - Upserts Thread + Message records on every fetch
+         - Returns dbThreadId alongside gmailId
+
+  [OK] /api/gmail/[id]/route.js — multi-tenant + DB persistence
+         - Scoped to session.orgId
+         - Returns Message-ID header (needed for email threading)
+         - Upserts messages into DB
+
+  [OK] /api/gmail/send/route.js — multi-tenant + audit log
+         - Scoped to session.orgId + session.userId
+         - Updates Thread status to RESOLVED after sending
+         - Writes AuditLog entry on every send
+
+
+PHASE 2 — ONBOARDING & ORG MANAGEMENT
+─────────────────────────────────────────────
+  [OK] Sign-up page (create account → org auto-created)
+         → handled in NextAuth signIn callback (Phase 1)
+  [OK] Org settings page — /settings (admin only)
+         → shows org info, members table, invite form + copyable link
+  [OK] Invite teammates — POST /api/invites (admin only)
+         → generates token with 7-day expiry, returns link
+  [OK] Accept invite flow — /invite/[token] page + POST /api/invites/[token]/accept
+         → validates token, moves user to new org, cleans up empty auto-org
+  [OK] Role enforcement — lib/auth.js (requireAuth, requireAdmin)
+         → shared helpers used by all protected routes
+  [OK] /api/org — GET org info + members (used by settings page)
+  [OK] /api/emails/route.js — deleted (referenced old Email model)
+
+
+PHASE 3 — SHARED INBOX CORE
+─────────────────────────────────────────────
+  [OK] Thread list scoped per org (GET /api/threads — DB-first with filters)
+         - No live Gmail call on every load
+         - Polls every 30s to pick up changes from other agents
+  [OK] Thread status UI — open / in_progress / resolved / snoozed
+         - Status tabs in left panel (Active / Open / In Progress / Resolved / Snoozed / All)
+         - Status dropdown in right panel per thread
+         - PATCH /api/threads/[id] writes to DB + AuditLog
+  [OK] Assign thread to agent
+         - Dropdown in right panel with org members
+         - Assignee shown in thread list
+         - Auto-assigns to current user on AI reply generation
+  [OK] Filter inbox by status + assigned agent
+         - Status tabs + assignee dropdown (All / Me / Unassigned / specific agent)
+  [OK] Optimistic lock — show "Agent X is replying" to prevent duplicates
+         - Thread.lockedByUserId + lockedAt fields in schema
+         - Set on AI reply generation, cleared on send
+         - 10-minute TTL checked in /api/threads response
+         - Banner shown in thread view if locked by someone else
+  [OK] Sync Gmail button — manually triggers Gmail → DB sync
+  [OK] Mark thread as read/unread (Gmail label toggle)
+  [OK] Snooze with duration picker + auto-unsnooze on poll
+  [OK] Search threads (subject, sender, snippet — across all statuses)
+  [OK] Unread count badge in inbox header + page title
+
+
+PHASE 4 — AI WORKFLOW
+─────────────────────────────────────────────
+  [OK] Update /api/ai/route.js
+         - Use session.orgId + session.userId
+         - Read AISettings.systemPrompt for the org (fallback to default)
+         - Save AIReply (draft) to DB linked to thread + author
+         - Return aiReplyId alongside result
+         - Upserts AISettings on first call (safe default)
+         - Sets thread status to IN_PROGRESS on draft generation
+         - Writes AuditLog entry
+  [OK] AI reply linked to thread in frontend (pass dbThreadId)
+  [OK] Agent can edit draft before sending
+  [OK] Send route saves final text to AIReply.final + sets status SENT
+  [OK] AI usage tracking per org (count calls, for billing later)
+         - GET /api/org now returns aiCallsThisMonth (count from AuditLog)
+         - Shown in settings page under "AI Usage"
+  [OK] Org admin can edit their system prompt (AISettings page)
+         - PATCH /api/org/ai-settings — admin only
+         - Textarea in settings page with save + confirmation
+         - Upserts AISettings row, logs to AuditLog
+
+
+PHASE 5 — BILLING
+─────────────────────────────────────────────
+  [ ] Stripe integration (create customer on org creation)
+  [ ] Plans: FREE (X replies/mo), PRO (unlimited), ENTERPRISE (custom)
+  [ ] Usage gate — block AI generation if org is over quota
+  [ ] Stripe webhook — update org.plan on subscription change
+  [ ] Billing page (current plan, usage, upgrade button)
+
+
+PHASE 6 — PRODUCTION DEPLOYMENT
+─────────────────────────────────────────────
+  [ ] Neon Postgres — create production DB, set DATABASE_URL
+  [ ] Run prisma migrate deploy in CI
+  [ ] Vercel deployment (env vars, preview deployments)
+  [ ] Error monitoring — Sentry
+  [OK] Encrypt OAuth tokens at rest (ConnectedAccount.accessToken / refreshToken)
+  [OK] Rate limiting on /api/ai (per org, per user)
+  [ ] Background jobs for AI generation (Trigger.dev) — avoid serverless timeouts
+  [ ] Custom domain support
+
+
+KNOWN TECH DEBT
+─────────────────────────────────────────────
+  [OK] page.tsx — hardcoded "ishakhero8@gmail.com" in isMe check
+         → replaced with session.user.email via useSession()
+  [OK] page.tsx — inline styles everywhere
+         → migrated to Tailwind CSS v4; added sender name, snippet preview, timestamps
+  [OK] auth/route.js — duplicate scope key (dead code, second one wins)
+         → removed, single scope string now
+  [OK] /api/emails/route.js — references old Email model (deleted)
+         → removed
+  [OK] No loading states in frontend (fetch calls are fire-and-forget)
+         → loadingThreads, loadingAI, sending states added
+
+
+STACK
+─────────────────────────────────────────────
+  Framework   Next.js 16 + React 19
+  Database    PostgreSQL (Neon) via Prisma 5
+  Auth        NextAuth v4 (Google OAuth)
+  AI          OpenAI gpt-4o-mini
+  Deployment  Vercel
+  Styling     Tailwind CSS v4
